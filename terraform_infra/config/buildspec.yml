@@ -1,0 +1,46 @@
+# AWS_ACCOUNT_ID: "182009040698"
+version: 0.2
+
+
+env:
+  variables:
+    ENV: "prod"
+    APP_NAME: "nginx-in-prod"
+    TERRAFORM_VERSION: "1.0.2"
+
+phases:
+  pre_build:
+    commands:
+      - pip install jq
+      - export AWS_ACCOUNT=$(aws sts get-caller-identity |jq -r .Account)
+      - echo Logging into Amazon ECR...
+      - aws ecr get-login-password --region ${AWS_DEFAULT_REGION} | docker login --username AWS --password-stdin ${AWS_ACCOUNT}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com
+      - curl -sSL "https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip" -o terraform.zip
+      - unzip terraform.zip -d /usr/local/bin && chmod +x /usr/local/bin/terraform
+      - export REPOSITORY_NAME="${AWS_ACCOUNT}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com/${APP_NAME}-${ENV}"
+      - echo "Getting current tag"
+      - export SERVICE_ARN=$(aws ecs list-services --cluster ${APP_NAME}-${ENV}-ECS-Cluster | jq -r .serviceArns[])
+      - export TASKDEF_ARN=$(aws ecs describe-services --cluster ${APP_NAME}-${ENV}-ECS-Cluster --service ${SERVICE_ARN} | jq -r .services[].taskDefinition)
+      - export EXISTING_TAG=$(aws ecs describe-task-definition --task-definition ${TASKDEF_ARN} | jq -r .taskDefinition.containerDefinitions[].image | awk -F ":" '{ print $NF }')
+      - echo "Current version is ${EXISTING_TAG}"
+
+
+  build:
+    commands:
+      - echo Build started on $(date)
+      - echo Building an image
+      - cd "${CODEBUILD_SRC_DIR}/web"
+      - export TAG="${CODEBUILD_RESOLVED_SOURCE_VERSION}"
+      - docker build -t ${APP_NAME}-${ENV}:${TAG} .
+      - docker tag ${APP_NAME}-${ENV}:${TAG} ${REPOSITORY_NAME}:${TAG}
+  post_build:
+    commands:
+      - echo Build completed on $(date)
+      - echo Pushing the image....
+      - docker push ${REPOSITORY_NAME}:${TAG}
+      - cd ${CODEBUILD_SRC_DIR}/terraform_infra
+      - terraform init
+      - echo "Terraform has been initialized"
+      - terraform plan -target=module.ecs_cluster --var-file="./config/${ENV}.tfvars" -var="image_tag=${TAG}" -no-color -input=false -out plan.out
+      - terraform apply -auto-approve -no-color -input=false plan.out
+      - echo "New code has been deployed"

@@ -1,0 +1,6 @@
+.terraform/
+.terraform.lock.hcl
+
+./terraform_infra/config/secret.tfvars
+./terraform_infra/.terraform.lock.hcl
+./terraform_infra/.terraform/

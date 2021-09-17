@@ -1,0 +1,11 @@
+env               = "dev"
+app_name          = "nginx-app"
+aws_profile       = "default"
+aws_account       = "182009040698"
+aws_region        = "eu-central-1"
+bucket_name       = "my-nginx-app-development-eu-central-1"
+image_tag         = "v1.0.0"
+repo_url          = "https://github.com/7serg/webtest/tree/devenv"
+branch_pattern    = "devenv"
+git_trigger_event = "PUSH"
+app_count         = 2
