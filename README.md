@@ -64,8 +64,8 @@ terraform apply -target=module.codebuild --var-file=./config/dev.tfvars --var-fi
 So, you should run destroy for modules one by one in reverse order of deployment
 
 ```
-terraform apply -target=module.codebuild --var-file=./config/dev.tfvars --var-file=./config/secret.tfvars
-terraform apply -target=module.ecs_cluste --var-file=./config/dev.tfvars
-terraform apply -target=module.first_build --var-file=./config/dev.tfvars
-terraform apply -target=module.ecr_repository --var-file=./config/dev.tfvars
+terraform destroy -target=module.codebuild --var-file=./config/dev.tfvars --var-file=./config/secret.tfvars
+terraform destroy -target=module.ecs_cluste --var-file=./config/dev.tfvars
+terraform destroy -target=module.first_build --var-file=./config/dev.tfvars
+terraform destroy -target=module.ecr_repository --var-file=./config/dev.tfvars
 ```
